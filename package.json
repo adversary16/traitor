@@ -1,0 +1,19 @@
+{
+  "name": "traitorous",
+  "version": "0.0.9",
+  "description": "Simplistic implementation of traits mechanism for Javascript. ",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "author": "Adversary16",
+  "repository": {
+    "url": "https://github.com/adversary16/traitor",
+    "type": "github"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "5.6.2",
+    "vitest": "2.1.2"
+  }
+}
