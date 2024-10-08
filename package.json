@@ -1,6 +1,6 @@
 {
   "name": "traitorous",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Simplistic implementation of traits mechanism for Javascript. ",
   "main": "index.js",
   "scripts": {

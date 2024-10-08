@@ -25,11 +25,22 @@ const OtherTrait = Trait('MyOtherTrait', {
 class WithTraits extends Traits('MyTrait', 'MyOtherTrait'){
 
 }
+
+// alternatively, you can extend from trait classes:
+class WithTraits2 extends Traits(OtherTrait){
+
+}
 ```
 
 Trait-check classes via instanceof:
 
 ```
-x instanceOf Trait('HasTrait')
-x instanceOf IsOtherTrait
+ instanceOf Trait('HasTrait')
+ instanceOf IsOtherTrait
+```
+
+Trait-check for multiple traits:
+
+```
+hasTraits(yourObject, 'traitName1', TraitInstance2)
 ```
