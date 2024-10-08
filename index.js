@@ -1,63 +1,77 @@
 /// Errors
 
 class NotATraitError extends Error {
-  constructor(obj){
-    super()
-    this.message = `This is not a trait: ${obj}`
+  constructor(obj) {
+    super();
+    this.message = `This is not a trait: ${obj}`;
   }
 }
 class TraitError extends Error {
-  constructor(traitName = ''){
-    super()
+  constructor(traitName = "") {
+    super();
     this.traitName = traitName;
   }
 }
 
 class NoSuchTraitError extends TraitError {
-  get message(){
-    return `Trait \'${this.traitName}\' is not declared.`
+  get message() {
+    return `Trait \'${this.traitName}\' is not declared.`;
   }
 }
 
-class AlreadyDefinedError extends TraitError{
-  get message(){
+class AlreadyDefinedError extends TraitError {
+  get message() {
     return `
 Trait \'${this.traitName}'\ has already been declared, can't redeclare.
-Call Trait with only the name argument to access existing trait instance`
-  } 
+Call Trait with only the name argument to access existing trait instance`;
+  }
 }
 
 class TraitStructureError extends Error {
-  constructor(structureType = '') {
-    super()
+  constructor(structureType = "") {
+    super();
     this.structureType = structureType;
   }
 
-  get message(){
-    return `Trait body should an object as in Record<string, any>, not ${this.structureType}.`
+  get message() {
+    return `Trait body should an object as in Record<string, any>, not ${this.structureType}.`;
   }
 }
 
-
-const TRAIT_REGISTRY_KEY = Symbol.for('traitorousRegistry');
-const TRAIT_ATTRIBUTE = Symbol.for('traitorousTrait');
-const TRAITED_ATTRIBUTE = Symbol.for('traitorousTraited');
+const TRAIT_REGISTRY_KEY = Symbol.for("traitorousRegistry");
+const TRAIT_ATTRIBUTE = Symbol.for("traitorousTrait");
+const TRAITED_ATTRIBUTE = Symbol.for("traitorousTraited");
 globalThis[TRAIT_REGISTRY_KEY] = globalThis[TRAIT_REGISTRY_KEY] ?? new Map();
 
 const traitMap = globalThis[TRAIT_REGISTRY_KEY];
 
-
 /**
- * 
- * @param {string} name 
+ *
+ * @param {string} name
  * @param {object|undefined} structure if omitted, Trait will return currently defined Trait by that name,
  * or throw an error if no Trait is present.
  * @returns {class}
  */
 function Trait(name = "", structure) {
+  const TraitProxy = {
+    get(target, prop, receiver) {
+      if (prop === Symbol.hasInstance) {
+        return (checkedClass) => {
+          const objectTraitList =
+            checkedClass[TRAITED_ATTRIBUTE] ??
+            checkedClass?.prototype[TRAITED_ATTRIBUTE] ??
+            [];
+          console.log(objectTraitList, target);
+          return objectTraitList.includes(target[TRAIT_ATTRIBUTE]);
+        };
+      }
+      return target[prop];
+    },
+  };
+
   // die if there is no such trait, and no structure is provided.
   if (!structure && !traitMap.has(name)) {
-      throw new NoSuchTraitError(name)
+    throw new NoSuchTraitError(name);
   }
 
   // die on trait redefinition attempt.
@@ -71,8 +85,8 @@ function Trait(name = "", structure) {
   }
 
   // die if structure is not a legit object
-  if (typeof structure !== 'object' || Array.isArray(structure)) {
-    throw new TraitStructureError(typeof structure)
+  if (typeof structure !== "object" || Array.isArray(structure)) {
+    throw new TraitStructureError(typeof structure);
   }
 
   // create and store a trait, if name is not occupied, and structure is defined.
@@ -81,8 +95,9 @@ function Trait(name = "", structure) {
   Object.defineProperty(xCLass, TRAIT_ATTRIBUTE, { value: name });
   const mergedPrototype = Object.assign(xCLass.prototype, structure);
   Object.setPrototypeOf(xCLass, mergedPrototype);
-  traitMap.set(name, xCLass)
-  return xCLass;
+  const classProxy = new Proxy(xCLass, TraitProxy);
+  traitMap.set(name, classProxy);
+  return classProxy;
 }
 
 /**
@@ -92,39 +107,42 @@ function Trait(name = "", structure) {
  */
 function Traits(...names) {
   const traits = [];
-  const traitNames = []
+  const traitNames = [];
   const mergedClass = names.reduce(
     (acc, f) => {
-      const traitName = typeof f === 'string' ? f : f[TRAIT_ATTRIBUTE];
+      const traitName = typeof f === "string" ? f : f[TRAIT_ATTRIBUTE];
       if (!traitName) {
         throw new NotATraitError(f);
       }
-      Object.setPrototypeOf(Trait(traitName).prototype, acc.prototype);
-      traitNames.push(traitName)
-      traits.push(Trait(traitName));
-      return Trait(traitName);
+      Object.assign(acc.prototype, Trait(traitName).prototype);
+      traitNames.push(traitName);
+      return acc;
     },
     class {},
   );
-  Object.defineProperty(mergedClass, "name", { value: traitNames.join('_') });
-  mergedClass.prototype[TRAITED_ATTRIBUTE] = traits;
+  mergedClass.prototype[TRAITED_ATTRIBUTE] = traitNames;
   return mergedClass;
 }
 
 /**
- * 
- * @param {any} obj - object to be checked for traits 
+ *
+ * @param {any} obj - object to be checked for traits
  * @param  {...(string|class)} traits - list of traits to check against
  * @returns {boolean}
  */
 function hasTraits(obj, ...traits) {
-  const objectTraitList = obj[TRAITED_ATTRIBUTE] ?? obj?.prototype[TRAITED_ATTRIBUTE] ?? [];
-  const normalizedTraits = traits.map(t => typeof t === 'string' ? Trait(t) : t)
-  return normalizedTraits.find(trait => !objectTraitList.includes(trait)) === undefined
+  const objectTraitList =
+    obj[TRAITED_ATTRIBUTE] ?? obj?.prototype[TRAITED_ATTRIBUTE] ?? [];
+  const normalizedTraits = traits.map((t) =>
+    typeof t === "string" ? t : (t[TRAIT_ATTRIBUTE] ?? ""),
+  );
+  return (
+    objectTraitList.find((t) => !normalizedTraits.includes(t)) === undefined
+  );
 }
 
 module.exports = {
   Trait,
   Traits,
-  hasTraits
+  hasTraits,
 };
